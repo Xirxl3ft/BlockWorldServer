@@ -1,4 +1,3 @@
-```js
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
@@ -63,4 +62,4 @@ app.use(express.static(path.join(__dirname, "public")));
 app.listen(PORT, () => {
     console.log(`Game Hub running on port ${PORT}`);
 });
-```
+
