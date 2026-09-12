@@ -59,11 +59,6 @@ function cors(res) {
     );
 
     res.setHeader(
-        "Access-Control-Expose-Headers",
-        "*"
-    );
-
-    res.setHeader(
         "Access-Control-Max-Age",
         "86400"
     );
@@ -80,8 +75,7 @@ function reply(res, status, data) {
     const text = JSON.stringify(data);
 
     res.writeHead(status, {
-        "Content-Type": "application/json",
-        "Content-Length": Buffer.byteLength(text)
+        "Content-Type": "application/json"
     });
 
     res.end(text);
@@ -143,9 +137,6 @@ const server = http.createServer(function(req, res) {
         path
     );
 
-    /*
-     * CORS preflight
-     */
     if (req.method === "OPTIONS") {
 
         cors(res);
@@ -159,6 +150,7 @@ const server = http.createServer(function(req, res) {
     /*
      * SERVER STATUS
      */
+
     if (
         req.method === "GET" &&
         path === "/"
@@ -176,8 +168,26 @@ const server = http.createServer(function(req, res) {
     }
 
     /*
+     * SIMPLE TEST
+     */
+
+    if (
+        req.method === "GET" &&
+        path === "/test"
+    ) {
+
+        reply(res, 200, {
+            ok: true,
+            message: "BlockWorld server can be reached."
+        });
+
+        return;
+    }
+
+    /*
      * CREATE ROOM
      */
+
     if (
         req.method === "POST" &&
         path === "/create"
@@ -186,17 +196,11 @@ const server = http.createServer(function(req, res) {
         const code = makeCode();
 
         rooms.set(code, {
-
             client: false,
-
             hostSeen: Date.now(),
-
             clientSeen: Date.now(),
-
             id: 0,
-
             messages: []
-
         });
 
         console.log(
@@ -205,11 +209,8 @@ const server = http.createServer(function(req, res) {
         );
 
         reply(res, 200, {
-
             ok: true,
-
             roomCode: code
-
         });
 
         return;
@@ -218,6 +219,7 @@ const server = http.createServer(function(req, res) {
     /*
      * JOIN ROOM
      */
+
     if (
         req.method === "POST" &&
         path === "/join"
@@ -272,7 +274,6 @@ const server = http.createServer(function(req, res) {
             }
 
             room.client = true;
-
             room.clientSeen = Date.now();
 
             addMessage(
@@ -288,11 +289,8 @@ const server = http.createServer(function(req, res) {
             );
 
             reply(res, 200, {
-
                 ok: true,
-
                 roomCode: code
-
             });
         });
 
@@ -300,8 +298,9 @@ const server = http.createServer(function(req, res) {
     }
 
     /*
-     * POLL MESSAGES
+     * POLL
      */
+
     if (
         req.method === "POST" &&
         path === "/poll"
@@ -364,21 +363,16 @@ const server = http.createServer(function(req, res) {
             const messages =
                 room.messages.filter(
                     function(message) {
-
                         return (
                             message.target === role &&
                             message.id > after
                         );
-
                     }
                 );
 
             reply(res, 200, {
-
                 ok: true,
-
                 messages: messages
-
             });
         });
 
@@ -386,8 +380,9 @@ const server = http.createServer(function(req, res) {
     }
 
     /*
-     * WEBRTC SIGNALING
+     * SIGNAL
      */
+
     if (
         req.method === "POST" &&
         path === "/signal"
@@ -488,6 +483,7 @@ const server = http.createServer(function(req, res) {
     /*
      * HEARTBEAT
      */
+
     if (
         req.method === "POST" &&
         path === "/heartbeat"
@@ -526,13 +522,9 @@ const server = http.createServer(function(req, res) {
             }
 
             if (role === "host") {
-
                 room.hostSeen = Date.now();
-
             } else if (role === "client") {
-
                 room.clientSeen = Date.now();
-
             } else {
 
                 reply(res, 400, {
@@ -551,19 +543,11 @@ const server = http.createServer(function(req, res) {
         return;
     }
 
-    /*
-     * UNKNOWN ROUTE
-     */
     reply(res, 404, {
-
         ok: false,
-
         error: "Not found.",
-
         path: path
-
     });
-
 });
 
 setInterval(function() {
@@ -573,7 +557,6 @@ setInterval(function() {
     for (const entry of rooms) {
 
         const code = entry[0];
-
         const room = entry[1];
 
         const hostGone =
