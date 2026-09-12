@@ -42,17 +42,21 @@ function makeRoomCode() {
 
 function getPath(req) {
 
-    try {
+    const url =
+        String(req.url || "/");
 
-        return new URL(
-            req.url,
-            `http://${req.headers.host || "localhost"}`
-        ).pathname;
+    const questionMark =
+        url.indexOf("?");
 
-    } catch (error) {
+    if (questionMark === -1) {
 
-        return "/";
+        return url;
     }
+
+    return url.substring(
+        0,
+        questionMark
+    );
 }
 
 
@@ -130,17 +134,28 @@ function readBody(req) {
 
             let body = "";
 
+            let finished =
+                false;
+
+
             req.on(
                 "data",
                 chunk => {
 
+                    if (finished) {
+                        return;
+                    }
+
                     body +=
                         chunk.toString();
+
 
                     if (
                         body.length >
                         1024 * 1024
                     ) {
+
+                        finished = true;
 
                         reject(
                             new Error(
@@ -158,12 +173,20 @@ function readBody(req) {
                 "end",
                 () => {
 
+                    if (finished) {
+                        return;
+                    }
+
+                    finished = true;
+
+
                     if (!body) {
 
                         resolve({});
 
                         return;
                     }
+
 
                     try {
 
@@ -185,7 +208,15 @@ function readBody(req) {
 
             req.on(
                 "error",
-                reject
+                error => {
+
+                    if (!finished) {
+
+                        finished = true;
+
+                        reject(error);
+                    }
+                }
             );
         }
     );
@@ -244,6 +275,20 @@ function queueMessage(
         time:
             Date.now()
     });
+
+
+    // Keep the queue from growing forever.
+
+    if (
+        room.messages.length >
+        200
+    ) {
+
+        room.messages =
+            room.messages.slice(
+                -200
+            );
+    }
 }
 
 
@@ -258,9 +303,11 @@ const server =
             const path =
                 getPath(req);
 
+
             console.log(
+                "REQUEST:",
                 req.method,
-                path
+                req.url
             );
 
 
@@ -300,6 +347,7 @@ const server =
                     res,
                     200,
                     {
+
                         ok:
                             true,
 
@@ -615,523 +663,4 @@ const server =
                                     "Invalid role."
                             }
                         );
-
-                        return;
-                    }
-
-
-                    const room =
-                        rooms.get(
-                            roomCode
-                        );
-
-
-                    if (!room) {
-
-                        sendJSON(
-                            res,
-                            404,
-                            {
-
-                                ok:
-                                    false,
-
-                                error:
-                                    "Room not found."
-                            }
-                        );
-
-                        return;
-                    }
-
-
-                    if (
-                        role ===
-                        "host"
-                    ) {
-
-                        room.hostSeen =
-                            Date.now();
-
-                    } else {
-
-                        room.clientSeen =
-                            Date.now();
-                    }
-
-
-                    const messages =
-                        room.messages.filter(
-                            message => {
-
-                                return (
-                                    message.target ===
-                                        role &&
-                                    message.id >
-                                        after
-                                );
-                            }
-                        );
-
-
-                    sendJSON(
-                        res,
-                        200,
-                        {
-
-                            ok:
-                                true,
-
-                            messages:
-                                messages
-                        }
-                    );
-
-                } catch (error) {
-
-                    console.error(
-                        "POLL ERROR:",
-                        error
-                    );
-
-
-                    sendJSON(
-                        res,
-                        400,
-                        {
-
-                            ok:
-                                false,
-
-                            error:
-                                error.message
-                        }
-                    );
-                }
-
-                return;
-            }
-
-
-            // =================================================
-            // SIGNAL
-            // =================================================
-
-            if (
-                req.method ===
-                    "POST" &&
-                path ===
-                    "/signal"
-            ) {
-
-                try {
-
-                    const body =
-                        await readBody(
-                            req
-                        );
-
-
-                    const roomCode =
-                        cleanRoomCode(
-                            body.roomCode
-                        );
-
-
-                    const role =
-                        body.role;
-
-
-                    const type =
-                        body.type;
-
-
-                    const data =
-                        body.data;
-
-
-                    const room =
-                        rooms.get(
-                            roomCode
-                        );
-
-
-                    if (!room) {
-
-                        sendJSON(
-                            res,
-                            404,
-                            {
-
-                                ok:
-                                    false,
-
-                                error:
-                                    "Room not found."
-                            }
-                        );
-
-                        return;
-                    }
-
-
-                    if (
-                        role !==
-                            "host" &&
-                        role !==
-                            "client"
-                    ) {
-
-                        sendJSON(
-                            res,
-                            400,
-                            {
-
-                                ok:
-                                    false,
-
-                                error:
-                                    "Invalid role."
-                            }
-                        );
-
-                        return;
-                    }
-
-
-                    const allowed =
-                        [
-                            "offer",
-                            "answer",
-                            "ice-candidate"
-                        ];
-
-
-                    if (
-                        !allowed.includes(
-                            type
-                        )
-                    ) {
-
-                        sendJSON(
-                            res,
-                            400,
-                            {
-
-                                ok:
-                                    false,
-
-                                error:
-                                    "Invalid signal type."
-                            }
-                        );
-
-                        return;
-                    }
-
-
-                    const target =
-                        role ===
-                        "host"
-                            ? "client"
-                            : "host";
-
-
-                    queueMessage(
-                        room,
-
-                        target,
-
-                        type,
-
-                        data
-                    );
-
-
-                    console.log(
-                        "SIGNAL:",
-                        type,
-                        role,
-                        "->",
-                        target,
-                        roomCode
-                    );
-
-
-                    sendJSON(
-                        res,
-                        200,
-                        {
-
-                            ok:
-                                true
-                        }
-                    );
-
-                } catch (error) {
-
-                    console.error(
-                        "SIGNAL ERROR:",
-                        error
-                    );
-
-
-                    sendJSON(
-                        res,
-                        400,
-                        {
-
-                            ok:
-                                false,
-
-                            error:
-                                error.message
-                        }
-                    );
-                }
-
-                return;
-            }
-
-
-            // =================================================
-            // HEARTBEAT
-            // =================================================
-
-            if (
-                req.method ===
-                    "POST" &&
-                path ===
-                    "/heartbeat"
-            ) {
-
-                try {
-
-                    const body =
-                        await readBody(
-                            req
-                        );
-
-
-                    const roomCode =
-                        cleanRoomCode(
-                            body.roomCode
-                        );
-
-
-                    const role =
-                        body.role;
-
-
-                    const room =
-                        rooms.get(
-                            roomCode
-                        );
-
-
-                    if (!room) {
-
-                        sendJSON(
-                            res,
-                            404,
-                            {
-
-                                ok:
-                                    false,
-
-                                error:
-                                    "Room not found."
-                            }
-                        );
-
-                        return;
-                    }
-
-
-                    if (
-                        role ===
-                        "host"
-                    ) {
-
-                        room.hostSeen =
-                            Date.now();
-
-                    } else if (
-                        role ===
-                        "client"
-                    ) {
-
-                        room.clientSeen =
-                            Date.now();
-
-                    } else {
-
-                        sendJSON(
-                            res,
-                            400,
-                            {
-
-                                ok:
-                                    false,
-
-                                error:
-                                    "Invalid role."
-                            }
-                        );
-
-                        return;
-                    }
-
-
-                    sendJSON(
-                        res,
-                        200,
-                        {
-
-                            ok:
-                                true
-                        }
-                    );
-
-                } catch (error) {
-
-                    console.error(
-                        "HEARTBEAT ERROR:",
-                        error
-                    );
-
-
-                    sendJSON(
-                        res,
-                        400,
-                        {
-
-                            ok:
-                                false,
-
-                            error:
-                                error.message
-                        }
-                    );
-                }
-
-                return;
-            }
-
-
-            // =================================================
-            // NOT FOUND
-            // =================================================
-
-            sendJSON(
-                res,
-                404,
-                {
-
-                    ok:
-                        false,
-
-                    error:
-                        "Not found.",
-
-                    path:
-                        path,
-
-                    method:
-                        req.method
-                }
-            );
-        }
-    );
-
-
-// ============================================================
-// CLEAN OLD ROOMS
-// ============================================================
-
-setInterval(
-    () => {
-
-        const now =
-            Date.now();
-
-
-        for (
-            const [
-                code,
-                room
-            ]
-            of rooms
-        ) {
-
-            const hostDead =
-                now -
-                room.hostSeen >
-                10 * 60 * 1000;
-
-
-            const clientDead =
-                room.client &&
-                now -
-                room.clientSeen >
-                10 * 60 * 1000;
-
-
-            if (
-                hostDead ||
-                clientDead
-            ) {
-
-                console.log(
-                    "REMOVING ROOM:",
-                    code
-                );
-
-
-                rooms.delete(
-                    code
-                );
-            }
-        }
-
-    },
-    60 * 1000
-);
-
-
-// ============================================================
-// START
-// ============================================================
-
-server.listen(
-    PORT,
-    "0.0.0.0",
-    () => {
-
-        console.log(
-            "================================="
-        );
-
-        console.log(
-            "BLOCKWORLD SERVER ONLINE"
-        );
-
-        console.log(
-            "PORT:",
-            PORT
-        );
-
-        console.log(
-            "HOST: 0.0.0.0"
-        );
-
-        console.log(
-            "TRANSPORT: HTTPS POLLING"
-        );
-
-        console.log(
-            "================================="
-        );
-    }
-);
 ```
