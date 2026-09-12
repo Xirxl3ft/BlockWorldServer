@@ -1,293 +1,4 @@
-const gameGrid = document.getElementById("gameGrid");
-const searchBox = document.getElementById("searchBox");
-const gameCount = document.getElementById("gameCount");
-const loading = document.getElementById("loading");
-const noResults = document.getElementById("noResults");
-
-const gameModal = document.getElementById("gameModal");
-const gameFrame = document.getElementById("gameFrame");
-const currentGameName = document.getElementById("currentGameName");
-const closeGame = document.getElementById("closeGame");
-
-let games = [];
-
-
-/*
-    LOAD GAMES
-*/
-
-async function loadGames() {
-
-    loading.classList.remove("hidden");
-
-    gameGrid.innerHTML = "";
-
-    try {
-
-        const response = await fetch(
-            "/api/games?t=" + Date.now()
-        );
-
-        if (!response.ok) {
-            throw new Error(
-                "Server returned " + response.status
-            );
-        }
-
-        const data = await response.json();
-
-        games = data.games || [];
-
-        gameCount.textContent =
-            games.length + " " +
-            (games.length === 1 ? "GAME" : "GAMES");
-
-        renderGames(games);
-
-    } catch (error) {
-
-        console.error(
-            "Could not load games:",
-            error
-        );
-
-        gameGrid.innerHTML = `
-            <div style="
-                grid-column: 1 / -1;
-                text-align: center;
-                padding: 60px 20px;
-                color: #888;
-            ">
-                <h2>Could not load games</h2>
-                <p>
-                    Make sure the game server is running.
-                </p>
-            </div>
-        `;
-
-    } finally {
-
-        loading.classList.add("hidden");
-    }
-}
-
-
-/*
-    RENDER GAME CARDS
-*/
-
-function renderGames(list) {
-
-    gameGrid.innerHTML = "";
-
-    noResults.classList.toggle(
-        "hidden",
-        list.length !== 0
-    );
-
-    list.forEach((game, index) => {
-
-        const card =
-            document.createElement("div");
-
-        card.className = "game-card";
-
-        const number =
-            document.createElement("div");
-
-        number.className = "game-number";
-
-        number.textContent =
-            "#" + String(index + 1).padStart(3, "0");
-
-
-        const name =
-            document.createElement("div");
-
-        name.className = "game-name";
-
-        name.textContent = game.name;
-
-
-        const button =
-            document.createElement("button");
-
-        button.className = "play-button";
-
-        button.textContent = "PLAY";
-
-
-        button.addEventListener(
-            "click",
-            function(event) {
-
-                event.stopPropagation();
-
-                openGame(game);
-
-            }
-        );
-
-
-        card.addEventListener(
-            "click",
-            function() {
-
-                openGame(game);
-
-            }
-        );
-
-
-        card.appendChild(number);
-
-        card.appendChild(name);
-
-        card.appendChild(button);
-
-        gameGrid.appendChild(card);
-
-    });
-}
-
-
-/*
-    OPEN GAME
-*/
-
-function openGame(game) {
-
-    currentGameName.textContent =
-        game.name;
-
-    gameFrame.src =
-        game.url;
-
-    gameModal.classList.remove(
-        "hidden"
-    );
-
-    document.body.style.overflow =
-        "hidden";
-}
-
-
-/*
-    CLOSE GAME
-*/
-
-function closeCurrentGame() {
-
-    gameFrame.src =
-        "about:blank";
-
-    gameModal.classList.add(
-        "hidden"
-    );
-
-    document.body.style.overflow =
-        "";
-
-}
-
-
-/*
-    SEARCH
-*/
-
-searchBox.addEventListener(
-    "input",
-    function() {
-
-        const query =
-            searchBox.value
-                .trim()
-                .toLowerCase();
-
-        if (!query) {
-
-            renderGames(games);
-
-            return;
-        }
-
-        const filtered =
-            games.filter(game => {
-
-                return (
-                    game.name
-                        .toLowerCase()
-                        .includes(query) ||
-
-                    game.file
-                        .toLowerCase()
-                        .includes(query)
-                );
-
-            });
-
-        renderGames(filtered);
-
-    }
-);
-
-
-/*
-    CLOSE BUTTON
-*/
-
-closeGame.addEventListener(
-    "click",
-    closeCurrentGame
-);
-
-
-/*
-    ESCAPE TO CLOSE
-*/
-
-document.addEventListener(
-    "keydown",
-    function(event) {
-
-        if (
-            event.key === "Escape" &&
-            !gameModal.classList.contains("hidden")
-        ) {
-
-            closeCurrentGame();
-
-        }
-
-    }
-);
-
-
-/*
-    CLOSE WHEN CLICKING OUTSIDE GAME
-*/
-
-gameModal.addEventListener(
-    "click",
-    function(event) {
-
-        if (
-            event.target === gameModal
-        ) {
-
-            closeCurrentGame();
-
-        }
-
-    }
-);
-
-
-/*
-    INITIAL LOAD
-*/
-
-loadGames();
+let allGames = [];
 
 const gameGrid = document.getElementById("gameGrid");
 const searchBox = document.getElementById("searchBox");
@@ -300,282 +11,189 @@ const gameFrame = document.getElementById("gameFrame");
 const currentGameName = document.getElementById("currentGameName");
 const closeGame = document.getElementById("closeGame");
 
-let games = [];
+
+function formatGameName(name) {
+    return name
+        .replace(/[-_]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .split(" ")
+        .map(word => {
+            if (!word) return "";
+
+            return word.charAt(0).toUpperCase() +
+                   word.slice(1);
+        })
+        .join(" ");
+}
 
 
-/*
-    LOAD GAMES
-*/
+function renderGames(games) {
+
+    gameGrid.innerHTML = "";
+
+    if (games.length === 0) {
+        noResults.classList.remove("hidden");
+        return;
+    }
+
+    noResults.classList.add("hidden");
+
+    games.forEach(game => {
+
+        const card = document.createElement("div");
+        card.className = "game-card";
+
+        const title = document.createElement("div");
+        title.className = "game-title";
+        title.textContent = formatGameName(game.name);
+
+        const playButton = document.createElement("button");
+        playButton.className = "play-button";
+        playButton.textContent = "PLAY";
+
+        playButton.addEventListener("click", () => {
+            openGame(game);
+        });
+
+        card.appendChild(title);
+        card.appendChild(playButton);
+
+        gameGrid.appendChild(card);
+    });
+}
+
+
+function openGame(game) {
+
+    currentGameName.textContent = formatGameName(game.name);
+
+    gameFrame.src = game.url;
+
+    gameModal.classList.remove("hidden");
+
+    document.body.style.overflow = "hidden";
+}
+
+
+function closeCurrentGame() {
+
+    gameFrame.src = "about:blank";
+
+    gameModal.classList.add("hidden");
+
+    document.body.style.overflow = "";
+}
+
 
 async function loadGames() {
 
     loading.classList.remove("hidden");
-
-    gameGrid.innerHTML = "";
+    loading.textContent = "Loading games...";
 
     try {
 
-        const response = await fetch(
-            "/api/games?t=" + Date.now()
-        );
+        const response = await fetch("/api/games", {
+            method: "GET",
+            cache: "no-store"
+        });
 
         if (!response.ok) {
             throw new Error(
-                "Server returned " + response.status
+                "Server returned HTTP " + response.status
             );
         }
 
         const data = await response.json();
 
-        games = data.games || [];
+        if (!data.ok) {
+            throw new Error("Game API returned an error.");
+        }
+
+        if (!Array.isArray(data.games)) {
+            throw new Error("Invalid game list received.");
+        }
+
+        allGames = data.games;
 
         gameCount.textContent =
-            games.length + " " +
-            (games.length === 1 ? "GAME" : "GAMES");
+            allGames.length + " GAMES";
 
-        renderGames(games);
+        renderGames(allGames);
+
+        loading.classList.add("hidden");
 
     } catch (error) {
 
-        console.error(
-            "Could not load games:",
-            error
-        );
+        console.error("Could not load games:", error);
 
-        gameGrid.innerHTML = `
-            <div style="
-                grid-column: 1 / -1;
-                text-align: center;
-                padding: 60px 20px;
-                color: #888;
-            ">
-                <h2>Could not load games</h2>
-                <p>
-                    Make sure the game server is running.
-                </p>
-            </div>
-        `;
+        loading.classList.remove("hidden");
 
-    } finally {
+        loading.textContent =
+            "Could not load games. " +
+            error.message;
 
-        loading.classList.add("hidden");
+        gameGrid.innerHTML = "";
+
+        noResults.classList.add("hidden");
     }
 }
 
 
-/*
-    RENDER GAME CARDS
-*/
+searchBox.addEventListener("input", () => {
 
-function renderGames(list) {
+    const search = searchBox.value
+        .toLowerCase()
+        .trim();
 
-    gameGrid.innerHTML = "";
+    if (!search) {
 
-    noResults.classList.toggle(
-        "hidden",
-        list.length !== 0
-    );
+        renderGames(allGames);
 
-    list.forEach((game, index) => {
+        return;
+    }
 
-        const card =
-            document.createElement("div");
-
-        card.className = "game-card";
-
-        const number =
-            document.createElement("div");
-
-        number.className = "game-number";
-
-        number.textContent =
-            "#" + String(index + 1).padStart(3, "0");
-
+    const filteredGames = allGames.filter(game => {
 
         const name =
-            document.createElement("div");
+            formatGameName(game.name).toLowerCase();
 
-        name.className = "game-name";
+        const filename =
+            game.file.toLowerCase();
 
-        name.textContent = game.name;
-
-
-        const button =
-            document.createElement("button");
-
-        button.className = "play-button";
-
-        button.textContent = "PLAY";
-
-
-        button.addEventListener(
-            "click",
-            function(event) {
-
-                event.stopPropagation();
-
-                openGame(game);
-
-            }
+        return (
+            name.includes(search) ||
+            filename.includes(search)
         );
-
-
-        card.addEventListener(
-            "click",
-            function() {
-
-                openGame(game);
-
-            }
-        );
-
-
-        card.appendChild(number);
-
-        card.appendChild(name);
-
-        card.appendChild(button);
-
-        gameGrid.appendChild(card);
-
     });
-}
+
+    renderGames(filteredGames);
+});
 
 
-/*
-    OPEN GAME
-*/
-
-function openGame(game) {
-
-    currentGameName.textContent =
-        game.name;
-
-    gameFrame.src =
-        game.url;
-
-    gameModal.classList.remove(
-        "hidden"
-    );
-
-    document.body.style.overflow =
-        "hidden";
-}
+closeGame.addEventListener("click", () => {
+    closeCurrentGame();
+});
 
 
-/*
-    CLOSE GAME
-*/
+gameModal.addEventListener("click", event => {
 
-function closeCurrentGame() {
-
-    gameFrame.src =
-        "about:blank";
-
-    gameModal.classList.add(
-        "hidden"
-    );
-
-    document.body.style.overflow =
-        "";
-
-}
-
-
-/*
-    SEARCH
-*/
-
-searchBox.addEventListener(
-    "input",
-    function() {
-
-        const query =
-            searchBox.value
-                .trim()
-                .toLowerCase();
-
-        if (!query) {
-
-            renderGames(games);
-
-            return;
-        }
-
-        const filtered =
-            games.filter(game => {
-
-                return (
-                    game.name
-                        .toLowerCase()
-                        .includes(query) ||
-
-                    game.file
-                        .toLowerCase()
-                        .includes(query)
-                );
-
-            });
-
-        renderGames(filtered);
-
+    if (event.target === gameModal) {
+        closeCurrentGame();
     }
-);
+});
 
 
-/*
-    CLOSE BUTTON
-*/
+document.addEventListener("keydown", event => {
 
-closeGame.addEventListener(
-    "click",
-    closeCurrentGame
-);
+    if (event.key === "Escape") {
 
-
-/*
-    ESCAPE TO CLOSE
-*/
-
-document.addEventListener(
-    "keydown",
-    function(event) {
-
-        if (
-            event.key === "Escape" &&
-            !gameModal.classList.contains("hidden")
-        ) {
-
+        if (!gameModal.classList.contains("hidden")) {
             closeCurrentGame();
-
         }
 
     }
-);
+});
 
-
-/*
-    CLOSE WHEN CLICKING OUTSIDE GAME
-*/
-
-gameModal.addEventListener(
-    "click",
-    function(event) {
-
-        if (
-            event.target === gameModal
-        ) {
-
-            closeCurrentGame();
-
-        }
-
-    }
-);
-
-
-/*
-    INITIAL LOAD
-*/
 
 loadGames();
