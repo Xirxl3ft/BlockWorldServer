@@ -1,4 +1,3 @@
-```javascript
 const gameGrid = document.getElementById("gameGrid");
 const searchBox = document.getElementById("searchBox");
 const gameCount = document.getElementById("gameCount");
