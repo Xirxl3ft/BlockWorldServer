@@ -1,12 +1,14 @@
+```json
 {
-  "name": "blockworld-signaling",
-  "version": "1.0.0",
-  "description": "BlockWorld WebRTC signaling server",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
-  "dependencies": {
-    "ws": "^8.21.3"
-  }
+    "name": "game-hub",
+    "version": "1.0.0",
+    "description": "Automatic HTML game hosting website",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js"
+    },
+    "dependencies": {
+        "express": "^4.21.2"
+    }
 }
+```
