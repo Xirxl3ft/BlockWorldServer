@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Game Hub</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div class="background"></div>
+
+    <header class="topbar">
+
+        <div class="logo">
+            GAME<span>HUB</span>
+        </div>
+
+        <div class="game-count" id="gameCount">
+            0 GAMES
+        </div>
+
+    </header>
+
+
+    <main>
+
+        <section class="hero">
+
+            <h1>GAME LIBRARY</h1>
+
+            <p>
+                Pick a game and start playing.
+            </p>
+
+            <div class="search-container">
+
+                <input
+                    id="searchBox"
+                    type="text"
+                    placeholder="Search games..."
+                    autocomplete="off"
+                >
+
+            </div>
+
+        </section>
+
+
+        <section class="library">
+
+            <div
+                id="loading"
+                class="loading"
+            >
+                Loading games...
+            </div>
+
+            <div
+                id="gameGrid"
+                class="game-grid"
+            ></div>
+
+            <div
+                id="noResults"
+                class="no-results hidden"
+            >
+                No games found.
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <div
+        id="gameModal"
+        class="game-modal hidden"
+    >
+
+        <div class="game-window">
+
+            <div class="game-window-bar">
+
+                <div
+                    id="currentGameName"
+                    class="current-game-name"
+                >
+                    Game
+                </div>
+
+                <button
+                    id="closeGame"
+                    class="close-button"
+                >
+                    CLOSE
+                </button>
+
+            </div>
+
+            <iframe
+                id="gameFrame"
+                src="about:blank"
+                allow="autoplay; fullscreen; gamepad"
+                allowfullscreen
+            ></iframe>
+
+        </div>
+
+    </div>
+
+
+    <script src="launcher.js"></script>
+
+</body>
+</html>
+

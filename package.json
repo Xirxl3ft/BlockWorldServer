@@ -1,0 +1,11 @@
+{
+  "name": "html-game-hub",
+  "version": "1.0.0",
+  "description": "Simple HTML game launcher",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {}
+}
+
